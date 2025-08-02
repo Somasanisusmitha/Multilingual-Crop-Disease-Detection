@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crop Disease Predictor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f8ff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #2f4f4f;
+        }
+
+        form {
+            background: #ffffff;
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+            color: #333;
+        }
+
+        input[type="text"], select {
+            width: 90%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        h3 {
+            color: #2e8b57;
+            margin-top: 30px;
+        }
+
+        p {
+            color: #444;
+            font-size: 16px;
+        }
+
+        p[style*="color:red;"] {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>Crop Disease Prediction</h2>
+
+    <form method="POST" action="/predict/">
+        {% csrf_token %}
+        
+        <label>Symptom (Type or Speak):</label>
+        <input type="text" name="symptom" id="symptom" placeholder="e.g., yellow spots" required>
+
+        <label>Crop:</label>
+        <input type="text" name="crop" id="crop" placeholder="e.g., wheat" required>
+
+        <label>Language:</label>
+        <select name="lang">
+            <option value="en">English</option>
+            <option value="ta">Tamil</option>
+            <option value="hi">Hindi</option>
+            <option value="te">Telugu</option>
+        </select>
+
+        <button type="submit">Predict</button>
+        <button type="button" onclick="startSequentialSpeech()">Speak</button>
+    </form>
+
+    {% if spoken_text %}
+        <h3>You said:</h3>
+        <p>{{ spoken_text }}</p>
+    {% endif %}
+
+    {% if disease %}
+        <h3>Predicted Disease:</h3>
+        <p>{{ disease }}</p>
+
+        <h3>Remedy:</h3>
+        <p>{{ remedy }}</p>
+    {% elif error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    <!-- Mic-to-Text JS for sequential symptom + crop -->
+    <script>
+        function startSequentialSpeech() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert("Sorry, your browser does not support speech recognition.");
+                return;
+            }
+
+            let recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onresult = function(event) {
+                const symptomText = event.results[0][0].transcript;
+                document.getElementById('symptom').value = symptomText;
+
+                // Now ask for crop
+                let cropRecognition = new webkitSpeechRecognition();
+                cropRecognition.lang = 'en-US';
+                cropRecognition.continuous = false;
+                cropRecognition.interimResults = false;
+
+                cropRecognition.onresult = function(event) {
+                    const cropText = event.results[0][0].transcript;
+                    document.getElementById('crop').value = cropText;
+                };
+
+                cropRecognition.onerror = function(event) {
+                    alert("Crop speech error: " + event.error);
+                };
+
+                alert("Now say the crop name...");
+                cropRecognition.start();
+            };
+
+            recognition.onerror = function(event) {
+                alert("Symptom speech error: " + event.error);
+            };
+
+            alert("Say the symptom...");
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
